@@ -22,15 +22,6 @@ do.call(
 map_dfc(
   seq(.05,.95,.1),
   function(.x) {
-    (dbeta(seq(.05,.95,.1),.x*10,10-.x*10))/
-      sum(dbeta(seq(.05,.95,.1),
-                .x*10,
-                10-.x*10))}
-) %>% as.matrix() -> B
-
-map_dfc(
-  seq(.05,.95,.1),
-  function(.x) {
     (pbeta(seq(.05,.95,.1),.x*10,10-.x*10))}
 ) %>% as.matrix() -> B
 
@@ -158,7 +149,7 @@ pop %>% activate(edges) %>%
   mutate(from = as.character(from),
          to = as.character(to)) -> pop_edges
 
-pop_nodes %>% group_by(smoker) %>% summarize(k = mean(k))
+pop_nodes %>% group_by(smoker) %>% summarize('E(k)' = mean(k))
 
 pop_edges %>% rename(name = from) %>%
   inner_join(pop_nodes %>% select(name,smoker), by = "name") %>%
