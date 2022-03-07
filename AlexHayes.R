@@ -42,9 +42,30 @@ View(B)
   
 ### latent sbm
 library(VGAM)
+library(tidyverse)
 
-dbetabinom(0:9,9,.22,.18) %>% barplot()
-(rbetabinom(10000,9,.22,.18)+.5) %>% mean()
+(18+36) / 2
+
+dbetabinom(0:9,9,.27,.5) %>% barplot()
+
+dbetabinom(0:9,9,.27,.3) %>% barplot()
+dbetabinom(0:9,9,.28,.3) %>% barplot()
+dbetabinom(0:9,9,.35,.3) %>% barplot()
+
+(rbetabinom(10000,9,.22,.3)+.5) %>% mean()
+
+(rbetabinom(10000,9,.22,.3)+.5) %>% var()
+
+param=list()
+param$p = .35
+
+mean(((rbetabinom(10000,9,param$p,.3)+.5) +
+    (rbetabinom(10000,9,param$p,.3)+.5))/
+  2)
+
+var(((rbetabinom(10000,9,param$p,.3)+.5) +
+        (rbetabinom(10000,9,param$p,.3)+.5))/
+       2)
 
 latent <- fastRG::sbm(
   n = V(graph1) %>% length(),
