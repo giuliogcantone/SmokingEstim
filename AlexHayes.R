@@ -44,13 +44,9 @@ View(B)
 library(VGAM)
 library(tidyverse)
 
-(18+36) / 2
+dbetabinom(0:9,9,.275,.3) %>% barplot()
+dbetabinom
 
-dbetabinom(0:9,9,.27,.5) %>% barplot()
-
-dbetabinom(0:9,9,.27,.3) %>% barplot()
-dbetabinom(0:9,9,.28,.3) %>% barplot()
-dbetabinom(0:9,9,.35,.3) %>% barplot()
 
 (rbetabinom(10000,9,.22,.3)+.5) %>% mean()
 
