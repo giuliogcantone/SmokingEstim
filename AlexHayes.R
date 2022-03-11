@@ -53,7 +53,7 @@ dbetabinom
 (rbetabinom(10000,9,.22,.3)+.5) %>% var()
 
 param=list()
-param$p = .35
+param$p = .27
 
 mean(((rbetabinom(10000,9,param$p,.3)+.5) +
     (rbetabinom(10000,9,param$p,.3)+.5))/
