@@ -4,20 +4,21 @@ library(tidygraph)
 library(VGAM)
 
 #g1
-n = 23
+n = 46000
 
 tibble(k = rpois(n,1.2)+1,
        nucleus = 1:n) -> g1
 
 tibble(
   w = .4,
-  nucleus = rep(g1$n$nucleus,g1$n$k)  %>% sample()) %>%
+  nucleus = rep(g1$nucleus,g1$k)  %>% sample()) %>%
   mutate(name = cur_group_rows()) %>%
   group_by(nucleus) %>%
   mutate(alpha = rbetabinom(1,9,.225,.3),
          alpha = (alpha/10) + .05) %>%
-  ungroup() %>%
-  with(
+  ungroup() -> g1
+
+g1 %>% with(
     .,
     do.call(
       rbind,
@@ -53,12 +54,13 @@ B/sum(B) -> B
 
 #
 library(fastRG)
+library(tidygraph)
 
 latent <- fastRG::sbm(
   n = V(g1) %>% length(),
   pi = dbetabinom(0:9,9,.225,.3),
   B = G,
-  expected_degree = 13,
+  expected_degree = 20,
   sort_nodes = T
 )
 
@@ -87,7 +89,6 @@ g %>% activate(nodes) %>% as_tibble() %>%
   group_by(smoker) %>% count() %>%
   ungroup %>% mutate(f = n/sum(n))
 
-
 library(ggraph)
 g %>% ggraph(layout = "stress") +
   geom_edge_link(aes(colour = color,
@@ -104,13 +105,7 @@ g %>% ggraph(layout = "stress") +
   theme(legend.position="none") 
 
 ggsave("network.eps", device = "eps")
-  
-ggsave()
 
-g %>% as.igraph()
-
-g %>% activate(nodes) %>% as_tibble() %>% filter(nucleus == nucleus[name == 8])
-g %>% activate(edges) %>% as_tibble() %>% filter(to == 57 | from == 57)
 
 ### Diagnostica
 
