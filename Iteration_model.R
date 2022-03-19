@@ -43,7 +43,7 @@ stats = list(
   f.smokers_hy_m = NA
 )
 
-for(i in 101:200){
+for(i in 226:250){
 
 params$n.nuclei[i] = sample(5000:15000,1,T)
 params$E_peers[i] = sample(3:23,1,T)
