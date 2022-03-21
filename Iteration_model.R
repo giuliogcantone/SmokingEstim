@@ -44,7 +44,7 @@ stats = list(
   f.smokers_hy_m = NA
 )
 
-for(i in 2958:3000){
+for(i in 2958:4000){
 
 if (i %in% seq(1,5000,100)) {save.image("simulation.RData")}
   
