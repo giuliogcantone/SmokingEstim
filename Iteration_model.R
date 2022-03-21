@@ -12,6 +12,7 @@ library(broom.mixed)
 
 params = list(n.nuclei = NA,
               E_peers = NA,
+              p_D = NA,
               w = NA,
               gamma = NA,
               r = NA,
@@ -43,13 +44,18 @@ stats = list(
   f.smokers_hy_m = NA
 )
 
-for(i in 226:250){
+for(i in 2958:3000){
 
-params$n.nuclei[i] = sample(5000:15000,1,T)
-params$E_peers[i] = sample(3:23,1,T)
-params$w[i] = runif(1,.1,.5)
-params$gamma[i] = runif(1,.2,.8)
-params$r[i] = runif(1,0,.5)
+if (i %in% seq(1,5000,100)) {save.image("simulation.RData")}
+  
+print(i)
+  
+  params$n.nuclei[i] = sample(5000:15000,1,T)
+  params$E_peers[i] = sample(3:23,1,T)
+  params$p_D[i] = runif(1,.15,.3)
+  params$w[i] = runif(1,.1,.5)
+  params$gamma[i] = runif(1,.2,.8)
+  params$r[i] = runif(1,0,.5)
 
 params$G[i] = list(params$B^params$gamma[i] /
                      sum(params$B^params$gamma[i]))
@@ -66,7 +72,7 @@ tibble(
                 stats$g1$k)  %>% sample()) %>%
   mutate(name = cur_group_rows()) %>%
   group_by(nucleus) %>%
-  mutate(alpha = rbetabinom(1,9,.225,.3),
+  mutate(alpha = rbetabinom(1,9,params$p_D[i],.3),
          alpha = (alpha/10) + .05) %>%
   ungroup() -> stats$g1
 
@@ -94,9 +100,9 @@ stats$g1 %>% with(
 
 latent <- fastRG::sbm(
   n = V(stats$g1) %>% length(),
-  pi = dbetabinom(0:9,9,.225,.3),
+  pi = dbetabinom(0:9,9,params$p_D[i],.3),
   B = params$G[[i]],
-  expected_degree = 20,
+  expected_degree = params$E_peers[i],
   sort_nodes = T
 )
 
@@ -135,6 +141,9 @@ stats$g %>% as_tibble %>%
 stats$g %>% as_tibble %>%
   summarise(f = mean(smoker)) %>%
   pull(f) -> stats$f.smokers[i]
+
+stats$g %>% mutate(phi = graph_assortativity(smoker)) %>%
+  as_tibble() %>% pull(phi) %>% .[1] -> stats$phi[i]
 
 stats$g %>%
   mutate(
@@ -238,14 +247,6 @@ stats$g %>% as_tibble() %>% filter(crawl_stage > -1) %>%
   summarise(f = mean(smoker)) %>%
   pull(f) -> stats$f.smokers_hp[i]
 
-stats$g %>% as_tibble() %>% filter(crawl_stage > -1) %>%
-  group_by(root) %>% mutate(
-    n.root = n()
-  ) %>% lmer(data = .,
-             smoker ~ 1 + 1|n.root) %>% tidy() %>%
-  pull(estimate) %>% .[1] -> stats$f.smokers_hp_m[i]
-
-
 # Yule 
 
 stats$g %>% mutate(
@@ -264,7 +265,7 @@ while(stats$g %>% as_tibble %>%
            k>0) %>%
     select(name,ego,k,m,root) %>%
     rowwise() %>%
-    mutate(picks = list(sample(ego,min(k,m-1)))) %>%
+    mutate(picks = list(sample(ego,min(k,m)))) %>%
     select(root, parent = name, name = picks) %>%
     unnest(cols = c(name)) -> stage
   
@@ -303,11 +304,4 @@ stats$g %>% as_tibble() %>% filter(crawl_stage > -1) %>%
 stats$g %>% as_tibble() %>% filter(crawl_stage > -1) %>%
   summarise(f = mean(smoker)) %>%
   pull(f) -> stats$f.smokers_hy[i]
-
-stats$g %>% as_tibble() %>% filter(crawl_stage > -1) %>%
-  group_by(root) %>% mutate(
-    n.root = n()
-  ) %>% lmer(data = .,
-             smoker ~ 1 + 1|n.root) %>% tidy() %>%
-  pull(estimate) %>% .[1] -> stats$f.smokers_hy_m[i]
 }
