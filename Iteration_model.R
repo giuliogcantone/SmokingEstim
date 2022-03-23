@@ -4,9 +4,6 @@ library(tidygraph)
 library(fastRG)
 library(VGAM)
 library(Matrix)
-library(fixest)
-library(lme4)
-library(broom.mixed)
 
 # params
 
@@ -44,7 +41,7 @@ stats = list(
   f.smokers_hy_m = NA
 )
 
-for(i in 2958:4000){
+for(i in 5001:8000){
 
 if (i %in% seq(1,5000,100)) {save.image("simulation.RData")}
   

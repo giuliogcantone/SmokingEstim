@@ -35,12 +35,11 @@ B/sum(B) -> B
 colnames(B) <- (seq(.05,.95,.1))
 rownames(B) <- (seq(.05,.95,.1))
 
-((B^.5)*1/.5) / sum(((B^.5)*1/.5)) -> G
-(G/.5) / sum(G/.5) -> G
+(B^.8) / sum(B^.8) -> G
+(B^.2) / sum(B^.2) -> G
 
-G*2 -> G
-G/sum(G) -> G
-
+sum(G)
+               
 colnames(G) <- (seq(.05,.95,.1))
 rownames(G) <- (seq(.05,.95,.1))
 
