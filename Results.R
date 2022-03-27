@@ -7,45 +7,53 @@ results =
     p_D = params$p_D,
     w = params$w,
     gamma = params$gamma,
-    phi = stats$phi,
+    phi_y = stats$phi,
+    phi_k = stats$phi_m,
     r = params$r,
     N = stats$N,
-    f.smokers = stats$f.smokers,
-    n.gold = stats$n.gold,
-    f.smokers_gold = stats$f.smokers_gold,
-    n.0 = stats$n.0,
-    f.smokers_0 = stats$f.smokers_0,
-    n.hp = stats$n.hp,
-    f.smokers_hp = stats$f.smokers_hp,
-    n.hy = stats$n.hy,
-    f.smokers_hy = stats$f.smokers_hy
+    y = stats$f.smokers,
+    n_gold = stats$n.gold,
+    y_gold = stats$f.smokers_gold,
+    n_0 = stats$n.0,
+    y_0 = stats$f.smokers_0,
+    n_p = stats$n.p,
+    y_p = stats$f.smokers_p,
+    n_hp = stats$n.hp,
+    y_hp = stats$f.smokers_hp,
+    n_y = stats$n.y,
+    y_y = stats$f.smokers_y,
+    n_hy = stats$n.hy,
+    y_hy = stats$f.smokers_hy,
   ) %>%
   mutate(
-    ERR_gold = f.smokers_gold - f.smokers,
-    ERR_0 = f.smokers_0 - f.smokers,
-    ERR_hp = f.smokers_hp - f.smokers,
-    ERR_hy =  f.smokers_hy - f.smokers
-  ) %>%
-  mutate(
-    gamma_level = cut_number(gamma,4),
-    phi_level = cut_number(phi,4),
-    w_level = cut_number(w,4),
-    n_level = cut_number(n.gold,4)
+    err_gold = y_gold - y,
+    err_p = y_p - y,
+    err_hp = y_hp - y,
+    err_y = y_y - y,
+    err_hy = y_hy - y,
+    abs_gold = abs(err_gold),
+    abs_p = abs(err_p),
+    abs_hp = abs(err_hp),
+    abs_y = abs(err_y),
+    abs_hy = abs(err_hy)
+  ) %>% mutate(
+    gamma_l = cut_number(gamma,4)
   )
 
-
 results %>% summarise(
-  cor = cor(gamma,phi),
-  cor2 = cor(w,phi)
+  cor = cor(gamma,phi_k),
+  cor2 = cor(gamma,phi_y),
+  cor3 = cor(phi_k,phi_y)
 )
 
 results %>% ggplot() +
-  geom_density(aes(ERR_hp), color = "green") +
-  geom_density(aes(ERR_hy), color = "red") +
-  geom_density(aes(ERR_0)) +
-  geom_density(aes(ERR_gold), color = "blue") +
-  facet_wrap(~gamma_level)+
-  theme_classic()
+  geom_density(aes(err_gold), color = "goldenrod", size = 2) +
+  #geom_density(aes(err_0), size = 2) +
+  geom_density(aes(err_p), color = "purple", size = 2) +
+  xlab("Error") +
+  ylab("") +
+  facet_wrap(~gamma_l)+
+  theme_classic(base_size = 20)
 
 results$phi %>% boxplot()
 results$ERR_gold %>% boxplot()
@@ -82,15 +90,19 @@ results %>% group_by(w_level) %>%
     n_hy = median(n.hy)
   )
 
-results %>% summarise(
-  var_gold = var(ERR_gold),
-  var_0 = var(ERR_0),
-  var_hp = var(ERR_hp),
-  var_hy = var(ERR_hy)
-)
 
 results %>%
   mutate(id = cur_group_rows(), .before = "n.nuclei") %>%
-  filter(abs(ERR_gold) > .06) %>% pull(id) -> redo
+  filter(abs(err_gold) > .055) %>% pull(id) -> redo
+
+results$err_gold %>% min()
+
 
 results$ERR_gold %>% min() 
+
+
+stats$g %>% as_tibble %>%
+  ggplot() +
+  stat_bin(aes(e), bins = 10)
+
+stats$g %>% as_tibble %>% pull(e) %>% mean()

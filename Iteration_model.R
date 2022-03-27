@@ -29,6 +29,9 @@ stats = list(
   N = NA,
   mean.e = NA,
   f.smokers = NA,
+  phi = NA,
+  phi_m = NA,
+  Q = NA,
   n.gold = NA,
   f.smokers_gold = NA,
   n.0 = NA,
@@ -41,9 +44,9 @@ stats = list(
   f.smokers_hy_m = NA
 )
 
-for(i in 5001:8000){
+for(i in redo){
 
-if (i %in% seq(1,5000,100)) {save.image("simulation.RData")}
+if (i %in% seq(1,8000,50)) {save.image("simulation.RData")}
   
 print(i)
   
@@ -124,12 +127,14 @@ graph_join(stats$g1,stats$g2) %>% as_tbl_graph() %>%
     color = ifelse(smoker==1,"green","pink")) %>%
   activate(edges) %>%
   distinct() %>%
-  activate(nodes) %>% arrange(name) -> stats$g
+  activate(nodes) %>% arrange(name) %>%
+  to_undirected -> stats$g
+
+stats$g %>% with_graph(.,graph_assortativity(smoker)) -> stats$phi[i]
 
 stats$g %>% as_tibble %>%
   summarise(n = n()) %>%
   pull(n) -> stats$N[i]
-
 
 stats$g %>% as_tibble %>%
   summarise(e = mean(e)) %>%
@@ -139,14 +144,15 @@ stats$g %>% as_tibble %>%
   summarise(f = mean(smoker)) %>%
   pull(f) -> stats$f.smokers[i]
 
-stats$g %>% mutate(phi = graph_assortativity(smoker)) %>%
-  as_tibble() %>% pull(phi) %>% .[1] -> stats$phi[i]
-
 stats$g %>%
   mutate(
     m = local_size(mindist = 1),
     ego = local_members(mindist = 1)
   ) -> stats$g
+
+stats$g %>% with_graph(.,graph_assortativity(m)) -> stats$phi_m[i]
+
+stats$g %>% with_graph(graph_modularity(as.factor(smoker))) -> stats$Q[i]
 
 ### Recruitment
 
@@ -179,6 +185,123 @@ stats$g %>% as_tibble() %>% filter(crawl_stage == 0) %>%
   summarise(f = mean(smoker)) %>%
   pull(f) -> stats$f.smokers_gold[i]
 
+
+# Poisson on Whole
+
+while(stats$g %>% as_tibble %>%
+      filter(k>0,
+             crawl_stage == t) %>% count() %>%
+      as.integer() != 0) {
+  
+  stats$g %>% as_tibble %>%
+    filter(crawl_stage == t,
+           k>0) %>%
+    select(name,ego,k,m,root) %>%
+    rowwise() %>%
+    mutate(picks = list(sample(ego,min(k,m)))) %>%
+    select(root, parent = name, name = picks) %>%
+    unnest(cols = c(name)) -> stage
+  
+  stage %>% anti_join(stats$g %>%
+                        as_tibble %>%
+                        filter(crawl_stage <= t), by = "name") %>%
+    left_join(stats$g %>% as_tibble() %>% select(name,e),
+              by = "name") %>%
+    group_by(name) %>%
+    mutate(
+      r = rbinom(1,100, params$r[i] + (e/10 - stats$mean.e[i]/10)*.25),
+      r = r/100,
+      fill = rbinom(1,1,(1-r))) %>%
+    filter(fill == 1)-> stage
+  
+  t = t+1
+  
+  stats$g %>% group_by(name) %>%
+    mutate(crawl_stage = ifelse(name %in% stage$name,t,crawl_stage),
+           parent = ifelse(name %in% stage$name,
+                           stage$parent[stage$name == name],
+                           parent),
+           root = ifelse(name %in% stage$name,
+                         stage$root[stage$parent == parent],
+                         root),
+           k = ifelse(crawl_stage == t,
+                      rpois(1,.5),
+                      k)
+    ) %>% ungroup() -> stats$g
+}
+
+stats$g %>% as_tibble() %>% filter(crawl_stage > -1) %>%
+  summarise(n = n()) %>%
+  pull(n) -> stats$n.p[i]
+
+stats$g %>% as_tibble() %>% filter(crawl_stage > -1) %>%
+  summarise(f = mean(smoker)) %>%
+  pull(f) -> stats$f.smokers_p[i]
+
+# Yule on Whole
+
+stats$g %>% mutate(
+  crawl_stage = ifelse(crawl_stage > 0,NA,0)
+) -> stats$g
+
+t = 0
+
+while(stats$g %>% as_tibble %>%
+      filter(k>0,
+             crawl_stage == t) %>% count() %>%
+      as.integer() != 0) {
+  
+  stats$g %>% as_tibble %>%
+    filter(crawl_stage == t,
+           k>0) %>%
+    select(name,ego,k,m,root) %>%
+    rowwise() %>%
+    mutate(picks = list(sample(ego,min(k,m)))) %>%
+    select(root, parent = name, name = picks) %>%
+    unnest(cols = c(name)) -> stage
+  
+  stage %>% anti_join(stats$g %>%
+                        as_tibble %>%
+                        filter(crawl_stage <= t), by = "name") %>%
+    left_join(stats$g %>% as_tibble() %>% select(name,e),
+              by = "name") %>%
+    group_by(name) %>%
+    mutate(
+      r = rbinom(1,100, params$r[i] + (e/10 - stats$mean.e[i]/10)*.25),
+      r = r/100,
+      fill = rbinom(1,1,(1-r))) %>%
+    filter(fill == 1)-> stage
+  
+  t = t+1
+  
+  stats$g %>% group_by(name) %>%
+    mutate(crawl_stage = ifelse(name %in% stage$name,t,crawl_stage),
+           parent = ifelse(name %in% stage$name,
+                           stage$parent[stage$name == name],
+                           parent),
+           root = ifelse(name %in% stage$name,
+                         stage$root[stage$parent == parent],
+                         root),
+           k = ifelse(crawl_stage == t,
+                      ryules(1,3)-1,
+                      k)
+    ) %>% ungroup() -> stats$g
+}
+
+stats$g %>% as_tibble() %>% filter(crawl_stage > -1) %>%
+  summarise(n = n()) %>%
+  pull(n) -> stats$n.y[i]
+
+stats$g %>% as_tibble() %>% filter(crawl_stage > -1) %>%
+  summarise(f = mean(smoker)) %>%
+  pull(f) -> stats$f.smokers_y[i]  
+
+### Halving
+
+stats$g %>% mutate(
+  crawl_stage = ifelse(crawl_stage > 0,NA,0)
+) -> stats$g
+
 stats$g %>% group_by(name) %>%
   mutate(
     crawl_stage = ifelse(crawl_stage == 0,
@@ -192,7 +315,9 @@ stats$g %>% as_tibble() %>% filter(crawl_stage == 0) %>%
   summarise(f = mean(smoker)) %>%
   pull(f) -> stats$f.smokers_0[i]
 
-# Poisson
+# Poisson on Half
+
+t = 0
 
 while(stats$g %>% as_tibble %>%
       filter(k>0,
@@ -244,7 +369,7 @@ stats$g %>% as_tibble() %>% filter(crawl_stage > -1) %>%
   summarise(f = mean(smoker)) %>%
   pull(f) -> stats$f.smokers_hp[i]
 
-# Yule 
+# Yule on Half
 
 stats$g %>% mutate(
   crawl_stage = ifelse(crawl_stage > 0,NA,0)
