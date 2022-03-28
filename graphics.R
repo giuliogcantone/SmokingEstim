@@ -35,8 +35,8 @@ B/sum(B) -> B
 colnames(B) <- (seq(.05,.95,.1))
 rownames(B) <- (seq(.05,.95,.1))
 
-(B^.8) / sum(B^.8) -> G
-(B^.2) / sum(B^.2) -> G
+(B^8) / sum(B^8) -> G
+(B^2) / sum(B^2) -> G
 
 sum(G)
                

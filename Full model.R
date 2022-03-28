@@ -303,3 +303,14 @@ stats$g %>% as_tibble() %>% filter(crawl_stage > -1) %>%
   ) %>% lmer(data = .,
              smoker ~ 1 + 1|n.root) %>% tidy() %>%
   pull(estimate) %>% .[1] -> stats$f.smokers_hy_m
+
+stats$g %>% as_tibble %>% ggplot() +
+  stat_bin(aes(e), bins = 10) +
+  theme_classic(base_size = 30)
+
+stats$g %>% as_tibble %>% ggplot() +
+  stat_density(aes(e - rnorm(length(e),0,.018))) +
+  theme_classic(base_size = 30) +
+  xlim(c(0,1)) +
+  xlab("e")
+
