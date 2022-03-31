@@ -1,28 +1,76 @@
 
 ```{r}
 results %>%
-  select(k,w,gamma,phi_y,phi_k,r,N,y,abs_gold) %>%
+  select(w,gamma,r,N,y,k,abs_gold) %>%
+  names() %>%
+  paste('scale(abs_p)~',.)%>%
+  map_df(~tidy(lm(as.formula(.x), 
+                  data= results %>% select(-gamma_l) %>% mutate_all(scale)
+  ))) %>%
+  filter(!term %>% str_detect("Intercept")) %>%
+  arrange(p.value) %>% select(term, estimate) %>%
+  mutate_if(is.numeric,round,3) %>%
+  left_join(
+    results %>%
+  select(w,gamma,r,N,y,k,abs_gold) %>%
   names() %>%
   paste('scale(abs_yu)~',.)%>%
   map_df(~tidy(lm(as.formula(.x), 
                   data= results %>% select(-gamma_l) %>% mutate_all(scale)
   ))) %>%
   filter(!term %>% str_detect("Intercept")) %>%
-  arrange(p.value) %>% select(-statistic) %>%
-  mutate_if(is.numeric,round,3)
+  arrange(p.value) %>% select(term, estimate) %>%
+  mutate_if(is.numeric,round,3), by = "term"
+  ) %>%
+  left_join(
+    results %>%
+  select(w,gamma,r,N,k,y,abs_gold) %>%
+  names() %>%
+  paste('scale(abs_hp)~',.)%>%
+  map_df(~tidy(lm(as.formula(.x), 
+                  data= results %>% select(-gamma_l) %>% mutate_all(scale)
+  ))) %>%
+  filter(!term %>% str_detect("Intercept")) %>%
+  arrange(p.value) %>% select(term, estimate) %>%
+  mutate_if(is.numeric,round,3), by = "term"
+  ) %>%
+  left_join(
+    results %>%
+  select(w,gamma,r,N,y,k,abs_gold) %>%
+  names() %>%
+  paste('scale(abs_hyu)~',.)%>%
+  map_df(~tidy(lm(as.formula(.x), 
+                  data= results %>% select(-gamma_l) %>% mutate_all(scale)
+  ))) %>%
+  filter(!term %>% str_detect("Intercept")) %>%
+  arrange(p.value) %>% select(term, estimate) %>%
+  mutate_if(is.numeric,round,3), by = "term"
+  )
 
 ```
 
 ```{r}
-results %>%
-  select(phi_y,phi_k,Q) %>%
-  names() %>%
-  paste('scale(gamma)~0+',.)%>%
-  map_df(~tidy(lm(as.formula(.x), 
-                  data= results %>% select(-gamma_l) %>% mutate_all(scale)
-  ))) %>%
-  #filter(!term %>% str_detect("Intercept")) %>%
-  arrange(p.value) %>% select(-statistic) %>%
+lm(data = results,
+   scale(delta_p) ~ scale(n_p - n_gold) + scale(gamma) + scale(r)) %>% tidy() %>% select(-p.value,statistic) %>%
+  mutate_if(is.numeric,round,3)
+```
+
+```{r}
+results %>% summarise(
+  delta_p = mean(delta_p)*100,
+  delta_yu = mean(delta_yu)*100,
+  delta_hp = mean(delta_hp)*100,
+  delta_hyu = mean(delta_hyu)*100
+) %>% add_column(gamma_l = NA, .before = "delta_p") %>%
+  add_row(
+
+results %>% group_by(gamma_l) %>%
+                summarise(
+  delta_p = mean(delta_p)*100,
+  delta_yu = mean(delta_yu)*100,
+  delta_hp = mean(delta_hp)*100,
+  delta_hyu = mean(delta_hyu)*100
+)) %>%
   mutate_if(is.numeric,round,3)
 ```
 
@@ -47,18 +95,6 @@ results %>% summarise(
 )
 
 ```
-
-```{r}
-results %>% select(c(starts_with("err"),gamma_l)) %>%
-  pivot_longer(cols = starts_with("err"),
-               names_to = "Sampling") %>%
-  ggplot() +
-  geom_boxplot(aes(y = Sampling,
-                   x = value * 100))+
-  facet_wrap(~gamma_l) +
-  theme_test(base_size = 20)
-```
-
 ```{r}
 results %>%
   mutate(I_p = abs_gold/y - abs_p/y,
@@ -69,11 +105,9 @@ results %>%
          I_hyu2 = abs_0/y - abs_hyu/y) %>%
   group_by(gamma_l) %>%
   summarise("Scenario I" = mean(I_p)*100,
-            "Scenario II" = mean(I_hp)*100,
-            "Scenario II*" = mean(I_hp2)*100,
+            "Scenario II" = mean(I_hp2)*100,
             "Scenario III" = mean(I_yu)*100,
-            "Scenario IV" = mean(I_hyu)*100,
-            "Scenario IV*" = mean(I_hyu2)*100) %>%
+            "Scenario IV" = mean(I_hyu2)*100) %>%
   mutate_if(is.numeric,round,3) %>%
   data.table::transpose(make.names = 'gamma_l', keep.names = 'gamma_l') %>%
   as.tibble()
@@ -88,33 +122,64 @@ results %>%
          I_hyu = abs_gold/y - abs_hyu/y,
          I_hyu2 = abs_0/y - abs_hyu/y) %>%
   group_by(gamma_l) %>%
-  summarise("Scenario I" = sum(abs_gold > abs_p)/n(),
-            "Scenario II" = sum(abs_gold > abs_hp)/n(),
-            "Scenario II*" = sum(abs_0 > abs_hp)/n(),
-            "Scenario III" = sum(abs_gold > abs_yu)/n(),
-            "Scenario IV" = sum(abs_gold > abs_hyu)/n(),
-            "Scenario IV*" = sum(abs_0 > abs_hyu)/n()) %>%
-  mutate_if(is.numeric,round,2) %>%
-  data.table::transpose(make.names = 'gamma_l', keep.names = 'gamma_l') %>%
-  as.tibble()
+  summarise("I" = sum(abs_gold > abs_p)/n(),
+            "II" = sum(abs_gold > abs_yu)/n(),
+            "III" = sum(abs_0 > abs_hp)/n(),
+            "IV" = sum(abs_0 > abs_hyu)/n()) %>%
+  mutate_if(is.numeric,round,2)
 ```
 
 
+
+```{r}
 results %>%
-  select(k,w,gamma,phi_y,phi_k,r,N,y,abs_gold) %>%
-  names() %>%
-  paste('scale(abs_hp)~',.)%>%
-  map_df(~tidy(lm(as.formula(.x), 
-                  data= results %>% select(-gamma_l) %>% mutate_all(scale)
-  ))) %>%
-  filter(!term %>% str_detect("Intercept"))%>% View()
+  summarise(I = 1 - (var(err_p)/var(err_gold)),
+            II = 1 - (var(err_yu)/var(err_gold)),
+            III = 1 - (var(err_hp)/var(err_0)),
+            IV = 1 - (var(err_hyu)/var(err_0))
+  ) %>%
+  add_row(results %>%
+      summarise(I = mean(err_p),
+                II = mean(err_yu),
+                III = mean(err_hp),
+                IV = mean(err_hyu))
+  ) %>%
+  mutate_if(is.numeric,round,2)
 
 results %>%
-  select(k,w,gamma,phi_y,phi_k,r,N,y,abs_gold) %>%
-  names() %>%
-  paste('scale(abs_y)~',.)%>%
-  map_df(~tidy(lm(as.formula(.x), 
-                  data= results %>% select(-gamma_l) %>% mutate_all(scale)
-  ))) %>%
-  filter(!term %>% str_detect("Intercept"))%>% View()
+      summarise(I = mean(ub_p),
+                II = mean(ub_yu),
+                III = mean(ub_hp),
+                IV = mean(ub_hyu)
+  ) %>%
+  mutate_if(is.numeric,round,2)
 
+```
+
+```{r}
+results %>% summarise(
+  I = mean(delta_ubp)*100,
+  II = mean(delta_ubyu)*100,
+  III = mean(delta_ubhp)*100,
+  IV = mean(delta_ubhyu)*100
+) %>% add_column(gamma_l = NA, .before = "I") %>%
+  add_row(
+
+results %>% group_by(gamma_l) %>%
+                summarise(
+  I = mean(delta_ubp)*100,
+  II = mean(delta_ubyu)*100,
+  III = mean(delta_ubhp)*100,
+  IV = mean(delta_ubhyu)*100
+)) %>%
+  mutate_if(is.numeric,round,3)
+
+results %>%
+  group_by(gamma_l) %>%
+  summarise("I" = sum(abs_gold > abs(ub_p))/n(),
+            "II" = sum(abs_gold > abs(ub_yu))/n(),
+            "III" = sum(abs_0 > abs(ub_hp))/n(),
+            "IV" = sum(abs_0 > abs(ub_hyu))/n()) %>%
+  mutate_if(is.numeric,round,2)
+
+```
