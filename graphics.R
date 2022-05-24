@@ -2,6 +2,7 @@
 
 library(VGAM)
 library(tidyverse)
+library(tidygraph)
 
 ggplot(tibble(
   z = seq(.05,.95,.1) %>% as.character() %>% str_remove("0"),
@@ -11,7 +12,7 @@ ggplot(tibble(
   geom_histogram(stat="identity") +
   theme_classic(base_size = 20) +
   ylab("Probability")+
-  xlab("Propensity score")
+  xlab("Random value")
   geom_vline(aes(xintercept = 2.75), color = "red")
   annotate("text",x=4,y=.32,label="Expected Value",
            color = "red", size = 10)
@@ -54,3 +55,21 @@ superheat::superheat(B,
                      legend = FALSE,
                      X.text.col = "black")
 ggsave("B.png")
+
+
+params$G
+
+params$G %>% as_tbl_graph()
+
+stats$g %>% as_tibble %>%
+  ggplot(aes(x =e + rnorm(length(e),0,.03))) +
+  stat_density() +
+  xlab("e(i)") +
+  theme_classic(base_size = 25)
+ggsave("e.eps")
+
+
+stats$g %>% as_tibble() %>% pull(e) %>% mean()
+stats$g %>% as_tibble() %>% pull(e) %>% var()
+
+params$p_D[8000]
